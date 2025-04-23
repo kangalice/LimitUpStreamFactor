@@ -16,15 +16,14 @@
 ├── python                          # python代码，包括离线数据运行脚本
 │   ├── my_utils.py
 ├── README.md
-├── src                             # C++源代码
-│   ├── matchengine.cpp             # 撮合逻辑
-│   └── offline_data_reader.cpp     # 离线行情回放
+├── demo                            # 示例代码
+│   └── BaseFactorGenerator.cpp     # demo
 └──
 ```
 
 ## 编译过程
 
-1. 需要用户从源码编译安装ZMQ(libzmq,cppzmq)，pybind11两个个外部库。
+1. 需要用户从源码编译安装ZMQ(libzmq,cppzmq)，pybind11两个外部库。
 
 2. 编译项目
 ```shell
