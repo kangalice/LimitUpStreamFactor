@@ -24,7 +24,7 @@
 
 ## 编译过程
 
-1. 需要用户从源码编译安装ARCHIVE，ZMQ(libzmq,cppzmq)，pybind11三个外部库。
+1. 需要用户从源码编译安装ZMQ(libzmq,cppzmq)，pybind11两个个外部库。
 
 2. 编译项目
 ```shell
