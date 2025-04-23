@@ -1,0 +1,7 @@
+*build*
+test*
+*log*
+*pycache*
+*.vscode*
+*.nohup
+bin/demo

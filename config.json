@@ -1,0 +1,15 @@
+{
+    "path_raw": "/mnt/data0/BasicData/StockDB/FundDB/raw",
+    "path_L2_ori": "/oss/tick_data/L2",
+    "path_offline_save": "/mnt/data0/BasicData/StockDB/QPData/L2/kline_3s",
+    "path_factor_save": "/mnt/data0/BasicData/StockDB/QPData/L2/base_factor",
+
+    "mode": "offline",
+    "zmq_port": {
+        "sh": "tcp://127.0.0.1:5565",
+        "sz": "tcp://127.0.0.1:5566"
+    },
+    "offline_sleep_sec": 20,
+
+    "save_kline_data": false
+}
