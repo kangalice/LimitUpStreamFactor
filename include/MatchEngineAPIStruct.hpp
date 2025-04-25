@@ -67,4 +67,7 @@ struct MatchParam {
     size_t factor_interver_ms = 60000;              // 因子计算间隔时间，单位ms
     size_t factor_ob_start_time = 93000000;         // 因子计算起始时间，格式为%H%M%S%f
     size_t factor_ob_end_time = 150000000;          // 因子计算起始时间，格式为%H%M%S%f
+
+    size_t process_num = 3;                         // 进程数量，可以是1,3,6,9...等进程数量
+    std::string recv_market = "sz";                 // 接收的市场类别，仅在process_num=1时生效，可以是sz/sh
 };
