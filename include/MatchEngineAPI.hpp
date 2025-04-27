@@ -37,17 +37,23 @@ public:
     void setAPI(
         MatchEngine* api, 
         std::vector<double *> v_shm, 
-        std::unordered_map<int, int> sec_idx_dict
+        std::unordered_map<int, int> sec_idx_dict,
+        std::vector<int> code_list,
+        int process_id
         ) {
         api_ = api;
         v_shm_ = v_shm;
         sec_idx_dict_ = sec_idx_dict;
+        code_list_ = code_list;
+        process_id_ = process_id;
     }
 
 protected:
-    MatchEngine *api_ = nullptr;  // 支持在回调函数中调用API的接口函数，具体见MatchEngine函数定义
-    std::vector<double *> v_shm_;  // 按照API中setParam函数输入的factor_names顺序排列的共享内存指针
-    std::unordered_map<int, int> sec_idx_dict_;  // 股票列索引字典，为当天所有股票对应的共享内存列索引
+    MatchEngine *api_ = nullptr;                    // 支持在回调函数中调用API的接口函数，具体见MatchEngine函数定义
+    std::vector<double *> v_shm_;                   // 按照API中setParam函数输入的factor_names顺序排列的共享内存指针
+    std::unordered_map<int, int> sec_idx_dict_;     // 股票列索引字典，为当天所有股票对应的共享内存列索引
+    std::vector<int> code_list_;                    // 该个spi需要处理的股票代码
+    int process_id_;                                // 进程id
 };
 
 

@@ -22,13 +22,15 @@ class DemoMatchEngineSPI : public MatchEngineSPI {
 public:
     /// @brief 初始化函数，会在setAPI之后被调用
     void Init() override {
-        /// 此时，sec_idx_dict已被注入，可以用它来初始化变量
-        for (const auto& it : sec_idx_dict_) {
-            ori_order_map[it.first] = std::unordered_map<seqnum_t, Order *>();
-            ori_trade_map[it.first] = std::unordered_map<seqnum_t, Trade *>();
-        }
-        col_size_ = sec_idx_dict_.size();
+        std::cout << "[spi] handling code list: " << code_list_[0] << "~" << code_list_[code_list_.size()-1] << std::endl;
+        col_size_ = code_list_.size();
 
+        for (int i = 0; i < col_size_; i++) {
+            ori_order_map[code_list_[i]] = std::unordered_map<seqnum_t, Order *>();
+            ori_trade_map[code_list_[i]] = std::unordered_map<seqnum_t, Trade *>();
+            my_sec_idx_[code_list_[i]] = i;
+        }
+        
         order_num_.resize(col_size_, 0);
         trade_num_.resize(col_size_, 0);
     }
@@ -53,7 +55,7 @@ public:
                 // sec_map.emplace(order->applseqnum, order);
 
                 // 推荐写法：在逐笔数据更新时以增量的方式计算因子值
-                order_num_[sec_idx_dict_[order->secutiryid]]++;
+                order_num_[my_sec_idx_[order->secutiryid]]++;
             } else {
                 // 上交所委托才会出现这种情况
                 // auto order_it = sec_map.find(order->applseqnum);
@@ -83,14 +85,14 @@ public:
         auto sec_map = ori_trade_map[trade->secutiryid];
 
         // 推荐写法：在逐笔数据更新时以增量的方式计算因子值
-        trade_num_[sec_idx_dict_[trade->secutiryid]]++;
+        trade_num_[my_sec_idx_[trade->secutiryid]]++;
 
         // 如果全为增量写法，则无需写下方的添加到成交簿的代码
         // if (sec_map.find(trade->applseqnum) == sec_map.end()) {
         //     sec_map.emplace(trade->applseqnum, trade);
 
         //     // 推荐写法：在逐笔数据更新时以增量的方式计算因子值
-        //     trade_num_[sec_idx_dict_[trade->secutiryid]]++;
+        //     trade_num_[my_sec_idx_[trade->secutiryid]]++;
         // }
 
         // 如果要联动盘口数据
@@ -116,22 +118,25 @@ public:
     /// @param factor_ob_idx 因子ob的次数索引，也等于其在共享内存中应写入的行号
     /// @param row_length 当前行数据起始点
     void onFactorOB(int factor_ob_idx, int row_length) override {
-        std::cout << "[factor ob] ob idx: " << factor_ob_idx << std::endl;
-        // 按在Params.factor_names中确定好的因子顺序，逐股票写出因子值
+        std::cout << "[factor ob "<< process_id_ << "] ob idx: " << factor_ob_idx << std::endl;
+        int sec_idx;
+        // 按在Params.factor_names中确定好的因子顺序，逐股票写出因子值，同时注意只写出本进程对应的股票的数据
         for (int i = 0; i < col_size_; i++) {
-            v_shm_[0][row_length+i] = order_num_[i];
-            v_shm_[1][row_length+i] = trade_num_[i];
+            sec_idx = sec_idx_dict_[code_list_[i]];
+            v_shm_[0][row_length+sec_idx] = order_num_[i];
+            v_shm_[1][row_length+sec_idx] = trade_num_[i];
         }
         this->reset();
     }
 
 protected:
-	std::unordered_map<int, std::unordered_map<seqnum_t, Order *>> ori_order_map;  // 分股票的原始订单委托序列
-    std::unordered_map<int, std::unordered_map<seqnum_t, Trade *>> ori_trade_map;  // 分股票的原始订单成交序列
+	std::unordered_map<int, std::unordered_map<seqnum_t, Order *>> ori_order_map;   // 分股票的原始订单委托序列
+    std::unordered_map<int, std::unordered_map<seqnum_t, Trade *>> ori_trade_map;   // 分股票的原始订单成交序列
+    std::unordered_map<int, int> my_sec_idx_;                                       // 维护一个本spi处理的股票的下标序列
 
 	std::vector<double> order_num_;     // 要写的因子1：委托笔数
 	std::vector<double> trade_num_;     // 要写的因子2：成交笔数
-    size_t col_size_;                   // 列的长度，即股票总数
+    size_t col_size_;                   // 列的长度，即本spi处理的股票总数
 };
 
 int main(int argc, char* argv[]) {

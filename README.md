@@ -51,5 +51,6 @@ make
 2. 调用createMatchAPI接口，创建一个API对象，该对象用来启动撮合和和查询盘口
 3. 调用registerSpi接口，将回报接收类对象传进请求类对象中
 4. 调用startMatch接口进行撮合
+5. 每个进程会有其独立的spi对象接口，每个spi只会处理一部分股票数据，在处理数据和进行ob的时候需要注意s
 
 在demo/BaseFactorGenerator.cpp中提供了demo，可以参考进行开发。
