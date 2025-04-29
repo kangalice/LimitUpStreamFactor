@@ -47,7 +47,7 @@ public:
         if (ori_order_map.find(order->secutiryid) == ori_order_map.end()) {
             return;
         }
-        auto sec_map = ori_order_map[order->secutiryid];
+        auto &sec_map = ori_order_map[order->secutiryid];
 
         if (order->ordertype != OrderType::Cancel) {
             if (sec_map.find(order->applseqnum) == sec_map.end()) {
@@ -82,7 +82,7 @@ public:
         if (ori_trade_map.find(trade->secutiryid) == ori_trade_map.end()) {
             return;
         }
-        auto sec_map = ori_trade_map[trade->secutiryid];
+        auto &sec_map = ori_trade_map[trade->secutiryid];
 
         // 推荐写法：在逐笔数据更新时以增量的方式计算因子值
         trade_num_[my_sec_idx_[trade->secutiryid]]++;
