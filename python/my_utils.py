@@ -8,6 +8,9 @@ import numpy as np
 
 from HighFreqFileSystem import HDFData
 
+import warnings
+warnings.filterwarnings("ignore", category=UserWarning)
+
 
 def get_pit_list_secs(date: str, path_raw: str) -> list:
     '''获取pit的上市的股票列表，考虑到股票代码变更'''
@@ -46,6 +49,7 @@ def get_offline_hdf_data(name: str, date: str, sec_list: list) -> list:
     df_data = df_data.set_index('securityid')
     df_data = df_data.loc[sec_list]
     res_list = df_data[name].tolist()
+    D.close()
     return res_list
 
 
