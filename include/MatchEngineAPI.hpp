@@ -13,24 +13,30 @@ public:
 
     /// @brief 在当笔盘口更新前，接收逐笔委托
     /// @param order 委托数据
-    virtual void onBeforeAddOrder(Order *order) {}
+    virtual void onBeforeAddOrder(const UnifiedRecord *order) {}
 
     /// @brief 在当笔盘口更新前，接收逐笔成交
     /// @param trade 成交数据
-    virtual void onBeforeAddTrade(Trade *trade) {}
+    virtual void onBeforeAddTrade(const UnifiedRecord *trade) {}
 
     /// @brief 在当笔盘口更新后，接收逐笔委托
     /// @param order 委托数据
-    virtual void onAfterAddOrder(Order *order) {}
+    virtual void onAfterAddOrder(const UnifiedRecord *order) {}
 
     /// @brief 在当笔盘口更新后，接收逐笔成交
     /// @param trade 成交数据
-    virtual void onAfterAddTrade(Trade *trade) {}
+    virtual void onAfterAddTrade(const UnifiedRecord *trade) {}
 
-    /// @brief 将因子值输出到共享内存中
+    /// @brief 将本对象所维护的所有股票的因子值输出到共享内存中
     /// @param factor_ob_idx 因子ob的次数索引，也等于其在共享内存中应写入的行号
     /// @param row_length 当前行数据起始点
     virtual void onFactorOB(int factor_ob_idx, int row_length) {}
+
+    /// @brief 将函数指定的股票的因子值输出到共享内存中
+    /// @param factor_ob_idx 因子ob的次数索引，也等于其在共享内存中应写入的行号
+    /// @param row_length 当前行数据起始点
+    /// @param securityid 写出数据的股票代码
+    virtual void onFactorOB(int factor_ob_idx, int row_length, int securityid) {}
 
     /// @brief API注入函数，用户无需关心
     /// @param api 
@@ -86,5 +92,5 @@ public:
     /// @param side 盘口方向
     /// @param n 盘口层数
     /// @return PriceLevel
-    virtual PriceLevel *getPriceLevel(int securityid, OrderSide side, size_t n) = 0;
+    virtual PriceLevel *getPriceLevel(int securityid, Side side, size_t n) = 0;
 };

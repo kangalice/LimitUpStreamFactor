@@ -6,7 +6,8 @@
 #include <unordered_map>
 
 typedef double price_t, amt_t;
-typedef int64_t seqnum_t, qty_t;
+typedef int64_t seqnum_t;
+typedef int32_t qty_t;
 
 static price_t MARKET_ASK_PRICE = 9999999;
 static price_t MARKET_BID_PRICE = 0;

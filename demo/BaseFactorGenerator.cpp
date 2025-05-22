@@ -1,8 +1,22 @@
 #include "MatchEngineAPI.hpp"
+#include "ObjectPool.hpp"
 #include <algorithm>
 #include <ctime>
 #include <iomanip>
 #include <iostream>
+
+// 用户自定义结构体，引用原始消息的同时拷贝一部分需要改动的字段
+struct MyOrder {
+    seqnum_t applseqnum;
+    price_t price;
+    qty_t qty;
+};
+
+struct MyTrade {
+    seqnum_t applseqnum;
+    price_t price;
+    qty_t qty;
+};
 
 std::string get_date_string(const std::string& dateInput = "") {
     std::time_t t = std::time(nullptr);
@@ -26,10 +40,13 @@ public:
         col_size_ = code_list_.size();
 
         for (int i = 0; i < col_size_; i++) {
-            ori_order_map[code_list_[i]] = std::unordered_map<seqnum_t, Order *>();
-            ori_trade_map[code_list_[i]] = std::unordered_map<seqnum_t, Trade *>();
+            ori_order_map[code_list_[i]] = std::unordered_map<seqnum_t, MyOrder *>();
+            ori_trade_map[code_list_[i]] = std::unordered_map<seqnum_t, MyTrade *>();
             my_sec_idx_[code_list_[i]] = i;
         }
+        // 如果需要存储大量的数据，建议使用对象池，demo中提供一种对象池的接口，用户可以自行实现更多功能的对象池
+        // ObjectPoolST<MyOrder> my_order_pool_ = ObjectPoolST<MyOrder>(10, 1<<23);  // 10 * 1<<23 ≈ 80m 条的数据
+        // ObjectPoolST<MyTrade> my_trade_pool_ = ObjectPoolST<MyTrade>(10, 1<<23);
         
         order_num_.resize(col_size_, 0);
         trade_num_.resize(col_size_, 0);
@@ -41,34 +58,41 @@ public:
         std::fill(trade_num_.begin(), trade_num_.end(), 0.0);
     }
 
+    void reset(int securityid) {
+        order_num_[my_sec_idx_[securityid]] = 0.0;
+        trade_num_[my_sec_idx_[securityid]] = 0.0;
+    }
+
     /// @brief 在当笔盘口更新前，接收逐笔委托
     /// @param order 委托数据
-    void onBeforeAddOrder(Order *order) override {
-        if (ori_order_map.find(order->secutiryid) == ori_order_map.end()) {
+    void onBeforeAddOrder(const UnifiedRecord *order) override {
+        if (ori_order_map.find(order->securityid) == ori_order_map.end()) {
             return;
         }
-        auto &sec_map = ori_order_map[order->secutiryid];
-
-        if (order->ordertype != OrderType::Cancel) {
+        auto &sec_map = ori_order_map[order->securityid];
+        
+        if (order->type != Type::Cancel) {
             if (sec_map.find(order->applseqnum) == sec_map.end()) {
                 // 如果全为增量写法，则无需写下方的添加到订单簿的代码
-                // sec_map.emplace(order->applseqnum, order);
+                // 建议使用对象池构造
+                // MyOrder* my_order = new (my_order_pool_.acquire()) MyOrder{order->applseqnum, order->price, order->qty};
+                // sec_map.emplace(order->applseqnum, my_order);
 
                 // 推荐写法：在逐笔数据更新时以增量的方式计算因子值
-                order_num_[my_sec_idx_[order->secutiryid]]++;
+                order_num_[my_sec_idx_[order->securityid]]++;
             } else {
                 // 上交所委托才会出现这种情况
-                // auto order_it = sec_map.find(order->applseqnum);
-                // order_it->second->orderqty += order->orderqty;
+                // auto my_order_it = sec_map.find(order->applseqnum);
+                // my_order_it->second->qty += order->qty;
             }
 
             // 如果要联动盘口数据
             // 获取最新的盘口状态，以对手方第三档数据为例
             // if (order->side == OrderSide::Bid) {
-            //     PriceLevel *price_level = api_->getPriceLevel(order->secutiryid, OrderSide::Ask, 2);
+            //     PriceLevel *price_level = api_->getPriceLevel(order->securityid, OrderSide::Ask, 2);
             //     // ...
             // } else {
-            //     PriceLevel *price_level = api_->getPriceLevel(order->secutiryid, OrderSide::Bid, 2);
+            //     PriceLevel *price_level = api_->getPriceLevel(order->securityid, OrderSide::Bid, 2);
             //     // ...
             // }
         } else {
@@ -78,43 +102,42 @@ public:
 
     /// @brief 在当笔盘口更新前，接收逐笔成交
     /// @param trade 成交数据
-    void onBeforeAddTrade(Trade *trade) override {
-        if (ori_trade_map.find(trade->secutiryid) == ori_trade_map.end()) {
+    void onBeforeAddTrade(const UnifiedRecord *trade) override {
+        if (ori_trade_map.find(trade->securityid) == ori_trade_map.end()) {
             return;
         }
-        auto &sec_map = ori_trade_map[trade->secutiryid];
 
         // 推荐写法：在逐笔数据更新时以增量的方式计算因子值
-        trade_num_[my_sec_idx_[trade->secutiryid]]++;
+        trade_num_[my_sec_idx_[trade->securityid]]++;
 
         // 如果全为增量写法，则无需写下方的添加到成交簿的代码
+        // auto &sec_map = ori_trade_map[trade->securityid];
         // if (sec_map.find(trade->applseqnum) == sec_map.end()) {
-        //     sec_map.emplace(trade->applseqnum, trade);
-
-        //     // 推荐写法：在逐笔数据更新时以增量的方式计算因子值
-        //     trade_num_[my_sec_idx_[trade->secutiryid]]++;
+        //     // 建议使用对象池构造
+        //     MyTrade* my_trade = new (my_trade_pool_.acquire()) MyTrade{trade->applseqnum, trade->price, trade->qty};
+        //     sec_map.emplace(trade->applseqnum, my_trade);
         // }
 
         // 如果要联动盘口数据
         // 获取最新的盘口状态，以对手方第三档数据为例
         // if (trade->trade_side == TradeSide::Buy) {
-        //     PriceLevel *price_level = api_->getPriceLevel(trade->secutiryid, OrderSide::Ask, 2);
+        //     PriceLevel *price_level = api_->getPriceLevel(trade->securityid, OrderSide::Ask, 2);
         //     // ...
         // } else {
-        //     PriceLevel *price_level = api_->getPriceLevel(trade->secutiryid, OrderSide::Bid, 2);
+        //     PriceLevel *price_level = api_->getPriceLevel(trade->securityid, OrderSide::Bid, 2);
         //     // ...
         // }
     }
 
     /// @brief 在当笔盘口更新后，接收逐笔委托
     /// @param order 委托数据
-    void onAfterAddOrder(Order *order) override {}
+    void onAfterAddOrder(const UnifiedRecord *order) override {}
 
     /// @brief 在当笔盘口更新后，接收逐笔成交
     /// @param trade 成交数据
-    void onAfterAddTrade(Trade *trade) override {}
+    void onAfterAddTrade(const UnifiedRecord *trade) override {}
 
-    /// @brief 将因子值输出到共享内存中
+    /// @brief 将本对象所维护的所有股票的因子值输出到共享内存中
     /// @param factor_ob_idx 因子ob的次数索引，也等于其在共享内存中应写入的行号
     /// @param row_length 当前行数据起始点
     void onFactorOB(int factor_ob_idx, int row_length) override {
@@ -129,10 +152,24 @@ public:
         this->reset();
     }
 
+    /// @brief 将函数指定的股票的因子值输出到共享内存中
+    /// @param factor_ob_idx 因子ob的次数索引，也等于其在共享内存中应写入的行号
+    /// @param row_length 当前行数据起始点
+    /// @param securityid 写出数据的股票代码
+    void onFactorOB(int factor_ob_idx, int row_length, int securityid) override {
+        int sec_idx = sec_idx_dict_[securityid];
+        v_shm_[0][row_length+sec_idx] = order_num_[my_sec_idx_[securityid]];
+        v_shm_[1][row_length+sec_idx] = trade_num_[my_sec_idx_[securityid]];
+        this->reset(securityid);
+    }
+
 protected:
-	std::unordered_map<int, std::unordered_map<seqnum_t, Order *>> ori_order_map;   // 分股票的原始订单委托序列
-    std::unordered_map<int, std::unordered_map<seqnum_t, Trade *>> ori_trade_map;   // 分股票的原始订单成交序列
-    std::unordered_map<int, int> my_sec_idx_;                                       // 维护一个本spi处理的股票的下标序列
+    ObjectPoolST<MyOrder> my_order_pool_;    // 委托对象池
+    ObjectPoolST<MyTrade> my_trade_pool_;    // 成交对象池
+
+	std::unordered_map<int, std::unordered_map<seqnum_t, MyOrder *>> ori_order_map;     // 分股票的原始订单委托序列
+    std::unordered_map<int, std::unordered_map<seqnum_t, MyTrade *>> ori_trade_map;     // 分股票的原始订单成交序列
+    std::unordered_map<int, int> my_sec_idx_;                                           // 维护一个本spi处理的股票的下标序列
 
 	std::vector<double> order_num_;     // 要写的因子1：委托笔数
 	std::vector<double> trade_num_;     // 要写的因子2：成交笔数
@@ -164,7 +201,12 @@ int main(int argc, char* argv[]) {
     MatchEngineAPI *match_api = MatchEngineAPI::createMatchAPI();
     auto match_spi = new DemoMatchEngineSPI();
     match_api->registerSPI(match_spi);
-    match_api->setParam(MatchParam{std::vector<std::string>{"order_num", "trade_num"}});
+
+    MatchParam param;
+    param.factor_names = std::vector<std::string>{"order_num", "trade_num"};
+    param.process_num = 3;
+    param.recv_market = "sz";
+    match_api->setParam(param);
 
     // 启动撮合，进程会阻塞在该函数
     match_api->startMatch(use_date, incre_port);

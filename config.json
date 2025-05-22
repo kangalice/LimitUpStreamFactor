@@ -6,8 +6,9 @@
 
     "mode": "offline",
     "zmq_port": {
-        "sh": "tcp://127.0.0.1:5565",
-        "sz": "tcp://127.0.0.1:5566"
+        "mode": "ipc",
+        "sh": "ipc:///tmp/quote_line_zmq_5565",
+        "sz": "ipc:///tmp/quote_line_zmq_5566"
     },
     "offline_sleep_sec": 20,
 

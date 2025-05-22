@@ -1,39 +1,16 @@
+#pragma once
 #include "MatchEngineAPIData.hpp"
 
-enum class OrderType {
-	Market = 49,
-	Limit = 50,
-	Cancel = 51,
-	U = 85,
-};
-
-enum class OrderSide { 
-	Bid = 49, 
-	Ask = 50 
-};
-
-enum class TradeSide { 
-	Buy = 'B', 
-	Sell = 'S', 
-	N = 'N', 
-	Both = 'O' 
-};
-
-enum class ObMode { 
+enum class ObMode: uint8_t { 
 	Limit = 0,
 	Call = 1,
 	Copy = 2
 };
 
-enum class CallMode {
+enum class CallMode: uint8_t {
 	Open = 0,
 	Close = 1,
 	None = 2
-};
-
-enum class Exchange {
-	SZ = 0,
-	SH = 1
 };
 
 struct PriceLevel {
@@ -41,26 +18,44 @@ struct PriceLevel {
 	qty_t qty;
 };
 
-struct Order {
-    int secutiryid;
-    int parse_time;
-    seqnum_t applseqnum;
-	price_t price;
-	qty_t orderqty;
-	OrderSide side;
-	OrderType ordertype;
+enum class Exchange: uint8_t {
+	SZ = 0,                         // 深圳
+	SH = 1                          // 上海
 };
 
-struct Trade {
-    int secutiryid;
-    int parse_time;
-    seqnum_t applseqnum;
-    seqnum_t buyno;
-    seqnum_t sellno;
-    price_t price;
-    qty_t qty;
-    TradeSide trade_side;
+enum class Side: uint8_t { 
+	Buy = 0,                        // 主动买
+	Sell = 1,                       // 主动卖
+	N = 2,                          // 未知，集合竞价成交单
+	Both = 3                        // 测试用
 };
+
+enum class Type: uint8_t { 
+	Limit = 0,                      // 限价单
+    Market = 1,                     // 市价单
+    Best = 2,                       // 本方最优
+	Cancel = 3,                     // 撤单
+    Trade = 4,                      // 成交
+	Status = 5,                     // 产品状态
+    End = 6                         // 结束标识符
+};
+
+#pragma pack(push, 1)
+struct UnifiedRecord {
+    Type type;                      // 类型
+    Exchange market;                // 市场
+    int32_t channel;                // 行情通道
+    int32_t securityid;             // 股票代码
+    seqnum_t applseqnum;            // 订单号
+    int32_t parse_time;             // 时间，格式为HHMMSSsss
+    seqnum_t buyno = 0;             // 买方订单号，当type=Trade时有效
+    seqnum_t sellno = 0;            // 卖方订单号，当type=Trade时有效
+    price_t price;                  // 价格
+    qty_t qty;                      // 成交量
+    Side side;                      // 买卖方向
+    seqnum_t biz_index;             // 业务序号
+};
+#pragma pack(pop)
 
 struct MatchParam {
     std::vector<std::string> factor_names;          // 因子名称，位置敏感，与输入ob函数的shms保持顺序一致
