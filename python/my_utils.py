@@ -5,6 +5,7 @@ import traceback
 
 import pandas as pd
 import numpy as np
+from joblib import Parallel, delayed
 
 from HighFreqFileSystem import HDFData
 
@@ -53,6 +54,19 @@ def get_offline_hdf_data(name: str, date: str, sec_list: list) -> list:
     return res_list
 
 
+def _save_one_shm(name, row_index, col_index, dtype, path_save, date, save_name):
+    try:
+        shm = shared_memory.SharedMemory(name=name)
+        resource_tracker.unregister(shm._name, 'shared_memory')
+        shm_array = np.ndarray((len(row_index), len(col_index)), dtype=dtype, buffer=shm.buf)
+        shm_df = pd.DataFrame(shm_array, index=row_index, columns=col_index)
+
+        os.makedirs(os.path.join(path_save, date), exist_ok=True)
+        shm_df.to_parquet(os.path.join(path_save, date, save_name + '.parquet'))
+    except:
+        print(traceback.format_exc())
+    return
+
 def save_shm_data(
     row_index: List[int], 
     col_index: List[int], 
@@ -69,16 +83,9 @@ def save_shm_data(
         )
     col_index = pd.Series(col_index).astype(str).str.rjust(6, '0')
 
-    for i, name in enumerate(shm_names):
-        try:
-            shm = shared_memory.SharedMemory(name=name)
-            resource_tracker.unregister(shm._name, 'shared_memory')
-            shm_array = np.ndarray((len(row_index), len(col_index)), dtype=dtype, buffer=shm.buf)
-            shm_df = pd.DataFrame(shm_array, index=row_index, columns=col_index)
-
-            os.makedirs(os.path.join(path_save, date), exist_ok=True)
-            shm_df.to_parquet(os.path.join(path_save, date, save_names[i] + '.parquet'))
-        except:
-            print(traceback.format_exc())
-            continue
+    njobs = min(5, len(shm_names))
+    Parallel(njobs)(delayed(_save_one_shm)(
+        name, row_index, col_index, dtype, path_save, date, save_names[i]) 
+        for i, name in enumerate(shm_names)
+        )
     return
