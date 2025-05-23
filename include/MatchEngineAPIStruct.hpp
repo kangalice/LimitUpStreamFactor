@@ -58,11 +58,13 @@ struct UnifiedRecord {
 #pragma pack(pop)
 
 struct MatchParam {
-    std::vector<std::string> factor_names;          // 因子名称，位置敏感，与输入ob函数的shms保持顺序一致
-    int factor_interver_ms = 60000;                 // 因子计算间隔时间，单位ms
-    int factor_ob_start_time = 93000000;            // 因子计算起始时间，格式为%H%M%S%f
-    int factor_ob_end_time = 150000000;             // 因子计算起始时间，格式为%H%M%S%f
+    std::vector<std::string> factor_names;              // 因子名称，位置敏感，与输入ob函数的shms保持顺序一致
+    int factor_interver_ms = 60000;                     // 因子计算间隔时间，单位ms
+    int factor_ob_start_time = 93000000;                // 因子计算起始时间，格式为%H%M%S%f
+    int factor_ob_end_time = 150000000;                 // 因子计算起始时间，格式为%H%M%S%f
 
-    size_t process_num = 3;                         // 进程数量，可以是1,3,6,9...等进程数量
-    std::string recv_market = "sz";                 // 接收的市场类别，仅在process_num=1时生效，可以是sz/sh
+    size_t process_num = 3;                             // 进程数量，可以是1,3,6,9...等进程数量
+    std::string recv_market = "sz";                     // 接收的市场类别，仅在process_num=1时生效，可以是sz/sh
+
+    std::vector<std::string> save_names = {"factor"};   // 保存的数据名称，支持"kline","factor"，默认"factor"
 };
