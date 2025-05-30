@@ -48,8 +48,8 @@ struct UnifiedRecord {
     int32_t securityid;             // 股票代码
     seqnum_t applseqnum;            // 订单号
     int32_t parse_time;             // 时间，格式为HHMMSSsss
-    seqnum_t buyno = 0;             // 买方订单号，当type=Trade时有效
-    seqnum_t sellno = 0;            // 卖方订单号，当type=Trade时有效
+    seqnum_t buyno = 0;             // 买方订单号，当type=Trade/Cancel时有效
+    seqnum_t sellno = 0;            // 卖方订单号，当type=Trade/Cancel时有效
     price_t price;                  // 价格
     qty_t qty;                      // 成交量
     Side side;                      // 买卖方向
@@ -67,4 +67,5 @@ struct MatchParam {
     std::string recv_market = "sz";                     // 接收的市场类别，仅在process_num=1时生效，可以是sz/sh
 
     std::vector<std::string> save_names = {"factor"};   // 保存的数据名称，支持"kline","factor"，默认"factor"
+    size_t log_level = 1;                               // 日志等级
 };
