@@ -13,6 +13,6 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 include_directories(${pybind11_INCLUDE_DIRS})
 link_directories(${CMAKE_SOURCE_DIR}/lib)
 
-add_executable(demo demo/BaseFactorGenerator.cpp)
+add_executable(demo demo/Baisc.cpp)
 
 target_link_libraries(demo MatchEngineImpl pybind11::embed)

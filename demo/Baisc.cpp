@@ -1,3 +1,4 @@
+// 此代码为Basic相关因子的计算代码，仅作为demo中代码约定格式举例
 #include "MatchEngineAPI.hpp"
 #include "ObjectPool.hpp"
 #include <algorithm>
