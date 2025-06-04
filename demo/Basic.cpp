@@ -82,9 +82,10 @@ public:
                 // 推荐写法：在逐笔数据更新时以增量的方式计算因子值
                 order_num_[my_sec_idx_[order->securityid]]++;
             } else {
-                // 上交所委托才会出现这种情况
+                // 上交所委托才会出现这种情况，还原逐笔委托和价格和量
                 // auto my_order_it = sec_map.find(order->applseqnum);
                 // my_order_it->second->qty += order->qty;
+                // my_order_it->second->price = order->price;
             }
 
             // 如果要联动盘口数据
@@ -110,6 +111,22 @@ public:
 
         // 推荐写法：在逐笔数据更新时以增量的方式计算因子值
         trade_num_[my_sec_idx_[trade->securityid]]++;
+
+        // 如果是上交所成交单，且需要保存还原后的逐笔委托，需进行如下代码的还原操作
+        if (trade->market == Exchange::SH) {
+            seqnum_t ori_num = trade->side == Side::Buy ? trade->buyno : trade->sellno;
+            auto &order_map = ori_order_map[trade->securityid];
+
+            if (order_map.find(ori_num) == order_map.end()) {
+                MyOrder* my_order = new (my_order_pool_.acquire()) MyOrder{ori_num, trade->price, trade->qty};
+                order_map.emplace(ori_num, my_order);
+            } else {
+                // 可能有多笔成交对应一笔主动委托
+                auto my_order_it = order_map.find(ori_num);
+                my_order_it->second->qty += trade->qty;
+                my_order_it->second->price = trade->price;
+            }
+        }
 
         // 如果全为增量写法，则无需写下方的添加到成交簿的代码
         // auto &sec_map = ori_trade_map[trade->securityid];

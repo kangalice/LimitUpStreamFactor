@@ -27,12 +27,12 @@ public:
     /// @param trade 成交数据
     virtual void onAfterAddTrade(const UnifiedRecord *trade) {}
 
-    /// @brief 将本对象所维护的所有股票的因子值输出到共享内存中
+    /// @brief 将本对象所维护的所有股票的因子值输出到共享内存中，该函数必须实现
     /// @param factor_ob_idx 因子ob的次数索引，也等于其在共享内存中应写入的行号
     /// @param row_length 当前行数据起始点
     virtual void onFactorOB(int factor_ob_idx, int row_length) {}
 
-    /// @brief 将函数指定的股票的因子值输出到共享内存中
+    /// @brief 将函数指定的股票的因子值输出到共享内存中，该函数必须实现
     /// @param factor_ob_idx 因子ob的次数索引，也等于其在共享内存中应写入的行号
     /// @param row_length 当前行数据起始点
     /// @param securityid 写出数据的股票代码
