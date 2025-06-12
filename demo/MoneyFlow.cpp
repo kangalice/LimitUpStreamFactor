@@ -112,8 +112,8 @@ public:
         // 推荐写法：在逐笔数据更新时以增量的方式计算因子值
         trade_num_[my_sec_idx_[trade->securityid]]++;
 
-        // 如果是上交所成交单，且需要保存还原后的逐笔委托，需进行如下代码的还原操作
-        if (trade->market == Exchange::SH) {
+        // 如果是上交所成交单，且需要保存还原后的逐笔委托，需进行如下代码的还原操作，跳过集合竞价成交单的还原
+        if (trade->market == Exchange::SH && trade->side != Side::N) {
             seqnum_t ori_num = trade->side == Side::Buy ? trade->buyno : trade->sellno;
             auto &order_map = ori_order_map[trade->securityid];
 
