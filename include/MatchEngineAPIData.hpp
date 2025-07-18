@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
+#include <cstdint>
 
 typedef double price_t, amt_t;
 typedef int64_t seqnum_t;
