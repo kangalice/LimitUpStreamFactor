@@ -10,7 +10,7 @@
         "sh": "ipc:///tmp/quote_line_zmq_5565",
         "sz": "ipc:///tmp/quote_line_zmq_5566"
     },
-    "offline_sleep_sec": 20,
+    "offline_sleep_sec": 25,
 
     "save_kline_data": false
 }

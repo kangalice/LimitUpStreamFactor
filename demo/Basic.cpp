@@ -229,5 +229,10 @@ int main(int argc, char* argv[]) {
     // 启动撮合，进程会阻塞在该函数
     match_api->startMatch(use_date, incre_port);
 
-    // api在结束后会自动保存，清理内存，用户在此处可直接退出
+    // 用户可调用saveData函数来保存数据
+    printf("trying to save data into fileSystem\n");
+    match_api->saveData(param.factor_names, "Test", "fileSystem", "1min,stock");
+
+    // 结束后建议手动调用close函数
+    match_api->close();
 }

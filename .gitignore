@@ -4,4 +4,5 @@ test*
 *pycache*
 *.vscode*
 *.nohup
-bin/demo
+bin/*
+!bin/offline_data

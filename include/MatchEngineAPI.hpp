@@ -82,6 +82,23 @@ public:
     /// @param incre_port 增量端口，多开时使用，默认为0
     /// @return 0:表示接口调用正常，其他值表示接口调用异常 
     virtual int startMatch(std::string date = "", size_t incre_port = 0) = 0;
+
+    /// @brief 保存得到的字段数据。一次调用保存一个logic。
+    /// @param data_name 保存的数据因子名称。如果保存因子数据，填写因子名称；如果保存3s盘口数据，可用全局变量MarketCols。
+    /// @param logic_name 逻辑名称，将作为因子名称的前缀，该字段作用等同于文件系统中logic_name作用。可填空，例如保存3s盘口数据时可填空。
+    /// @param save_type 保存数据格式，支持"parquet", "fileSystem"
+    /// @param file_sys_prefix 文件系统保存前缀，仅当save_type==fileSystem时有效。格式为"频率,类别"
+    /// @param mode 写入模式，仅当save_type==fileSystem时有效，分为"write", "fix"，修复数据时使用fix
+    virtual void saveData(
+        std::vector<std::string>& data_name, 
+        std::string logic_name,
+        std::string save_type,
+        std::string file_sys_prefix = "1min,stock",
+        std::string mode = "write"
+        ) = 0;
+
+    /// @brief 手动关闭接口，清理内存
+    virtual void close() = 0;
 };
 
 

@@ -1,5 +1,6 @@
 #pragma once
 #include "MatchEngineAPIData.hpp"
+#include <cstdint>
 
 enum class ObMode: uint8_t { 
 	Limit = 0,
@@ -66,6 +67,6 @@ struct MatchParam {
     size_t process_num = 3;                             // 进程数量，可以是1,3,6,9...等进程数量
     std::string recv_market = "sz";                     // 接收的市场类别，仅在process_num=1时生效，可以是sz/sh
 
-    std::vector<std::string> save_names = {"factor"};   // 保存的数据名称，支持"kline","factor"，默认"factor"
+    std::vector<std::string> save_names = {"factor"};   // 保存的数据名称，支持"kline","factor"，默认"factor"。该参数已无效，转由saveData函数进行保存。
     size_t log_level = 1;                               // 日志等级
 };
