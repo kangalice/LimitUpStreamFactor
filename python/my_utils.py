@@ -68,19 +68,20 @@ def _save_one_shm_parquet(name, row_index, col_index, dtype, path_save, date, sa
         shm_df.to_parquet(os.path.join(path_save, date, save_name + '.parquet'))
     except:
         print(traceback.format_exc())
-    return
 
-def _get_shm_dfs(name, row_index, col_index, dtype):
+def _get_shm_dfs(name, row_index, col_index, dtype, temp_save=False):
     try:
-        print(f'shm df {name} len({len(row_index)}), col({len(col_index)})')
+        print(f'shm df {name} row_index({len(row_index)}), col_index({len(col_index)}), dtype({dtype})')
         shm = shared_memory.SharedMemory(name=name)
         resource_tracker.unregister(shm._name, 'shared_memory')
         shm_array = np.ndarray((len(row_index), len(col_index)), dtype=dtype, buffer=shm.buf)
-        shm_df = pd.DataFrame(shm_array, index=row_index, columns=col_index)
+        shm_df = pd.DataFrame(shm_array, index=row_index, columns=col_index, copy=True)
+        if temp_save:
+            shm_df.to_parquet(f'{name}.parquet')
+        print(f'get {name} shm done, {shm_df}')
         return shm_df
     except:
         print(traceback.format_exc())
-    return
 
 def save_shm_data(
     row_index: List[int], 
@@ -146,6 +147,7 @@ def save_shm_data(
                     if D.check_factor_exist(save_names[-1]):
                         print(f'create {logic_name} data success, {real_start_date} ~ {real_end_date}')
                         flag_success = True
+                        D.close()
                         break
                     else:
                         print(f'create {logic_name} failed, please check! will retry after {SLEEP_TIME}s, try_time: {try_time}')
@@ -157,8 +159,9 @@ def save_shm_data(
                     elif mode == 'fix':
                         D.fix_data(dfs, save_names, True)
 
-                    print(f'{logic_name} {row_index.iloc[0]} ~ {row_index.iloc[-1]} finish')
+                    print(f'update {logic_name} {row_index.iloc[0]} ~ {row_index.iloc[-1]} finish')
                     flag_success = True
+                    D.close()
                     break
             except:
                 print(traceback.format_exc())
