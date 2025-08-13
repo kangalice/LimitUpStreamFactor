@@ -64,8 +64,9 @@ def _save_one_shm_parquet(name, row_index, col_index, dtype, path_save, date, sa
         shm_array = np.ndarray((len(row_index), len(col_index)), dtype=dtype, buffer=shm.buf)
         shm_df = pd.DataFrame(shm_array, index=row_index, columns=col_index)
 
-        os.makedirs(os.path.join(path_save, date), exist_ok=True)
-        shm_df.to_parquet(os.path.join(path_save, date, save_name + '.parquet'))
+        path_file = os.path.join(path_save, date, save_name + '.parquet')
+        os.makedirs(os.path.dirname(path_file), exist_ok=True)
+        shm_df.to_parquet(path_file)
     except:
         print(traceback.format_exc())
 
