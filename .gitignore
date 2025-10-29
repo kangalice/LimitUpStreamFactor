@@ -6,3 +6,6 @@ test*
 *.nohup
 bin/*
 !bin/offline_data
+
+# Conan
+CMakeUserPresets.json

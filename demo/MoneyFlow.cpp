@@ -2,9 +2,16 @@
 #include "MatchEngineAPI.hpp"
 #include "ObjectPool.hpp"
 #include <algorithm>
+#include <common_utils/Utils.hpp>
 #include <ctime>
+#include <cxxopts.hpp>
+#include <filesystem>
+#include <fmtlog/fmtlog.h>
 #include <iomanip>
 #include <iostream>
+
+/// @brief 默认日志目录的全局常量
+const std::string DEFAULT_LOGS_DIR = "logs";
 
 // 用户自定义结构体，引用原始消息的同时拷贝一部分需要改动的字段
 struct MyOrder {
@@ -19,28 +26,17 @@ struct MyTrade {
     qty_t qty;
 };
 
-std::string get_date_string(const std::string& dateInput = "") {
-    std::time_t t = std::time(nullptr);
-    std::tm* tm = std::localtime(&t);
-
-    if (!dateInput.empty()) {
-        std::istringstream ss(dateInput);
-        ss >> std::get_time(tm, "%Y-%m-%d");
-    }
-
-    std::ostringstream oss;
-    oss << std::put_time(tm, "%Y-%m-%d");
-    return oss.str();
-}
-
 class DemoMatchEngineSPI : public MatchEngineSPI {
 public:
     /// @brief 初始化函数，会在setAPI之后被调用
     void Init() override {
-        std::cout << "[spi] handling code list: " << code_list_[0] << "~" << code_list_[code_list_.size()-1] << std::endl;
+        logi("[spi] handling code list: {}~{}", code_list_[0], code_list_[code_list_.size() - 1]);
+        std::cout << "[spi] handling code list: " << code_list_[0] << "~" << code_list_[code_list_.size() - 1]
+                  << std::endl;
         col_size_ = code_list_.size();
+        aligned_col_size_ = align_col_size(col_size_);
 
-        for (int i = 0; i < col_size_; i++) {
+        for (int i = 0; i < aligned_col_size_; i++) {
             ori_order_map[code_list_[i]] = std::unordered_map<seqnum_t, MyOrder *>();
             ori_trade_map[code_list_[i]] = std::unordered_map<seqnum_t, MyTrade *>();
             my_sec_idx_[code_list_[i]] = i;
@@ -48,9 +44,9 @@ public:
         // 如果需要存储大量的数据，建议使用对象池，demo中提供一种对象池的接口，用户可以自行实现更多功能的对象池
         // ObjectPoolST<MyOrder> my_order_pool_ = ObjectPoolST<MyOrder>(10, 1<<23);  // 10 * 1<<23 ≈ 80m 条的数据
         // ObjectPoolST<MyTrade> my_trade_pool_ = ObjectPoolST<MyTrade>(10, 1<<23);
-        
-        order_num_.resize(col_size_, 0);
-        trade_num_.resize(col_size_, 0);
+
+        order_num_.resize(aligned_col_size_, 0);
+        trade_num_.resize(aligned_col_size_, 0);
     }
 
     /// 状态变量更新函数
@@ -71,13 +67,13 @@ public:
             return;
         }
         auto &sec_map = ori_order_map[order->securityid];
-        
+
         if (order->type != Type::Cancel) {
             if (sec_map.find(order->applseqnum) == sec_map.end()) {
                 // 如果全为增量写法，则无需写下方的添加到订单簿的代码
                 // 建议使用对象池构造
-                // MyOrder* my_order = new (my_order_pool_.acquire()) MyOrder{order->applseqnum, order->price, order->qty};
-                // sec_map.emplace(order->applseqnum, my_order);
+                // MyOrder* my_order = new (my_order_pool_.acquire()) MyOrder{order->applseqnum, order->price,
+                // order->qty}; sec_map.emplace(order->applseqnum, my_order);
 
                 // 推荐写法：在逐笔数据更新时以增量的方式计算因子值
                 order_num_[my_sec_idx_[order->securityid]]++;
@@ -118,7 +114,7 @@ public:
             auto &order_map = ori_order_map[trade->securityid];
 
             if (order_map.find(ori_num) == order_map.end()) {
-                MyOrder* my_order = new (my_order_pool_.acquire()) MyOrder{ori_num, trade->price, trade->qty};
+                MyOrder *my_order = new (my_order_pool_.acquire()) MyOrder{ori_num, trade->price, trade->qty};
                 order_map.emplace(ori_num, my_order);
             } else {
                 // 可能有多笔成交对应一笔主动委托
@@ -159,13 +155,14 @@ public:
     /// @param factor_ob_idx 因子ob的次数索引，也等于其在共享内存中应写入的行号
     /// @param row_length 当前行数据起始点
     void onFactorOB(int factor_ob_idx, int row_length) override {
-        std::cout << "[factor ob "<< process_id_ << "] ob idx: " << factor_ob_idx << std::endl;
+        std::cout << "[factor ob " << process_id_ << "] ob idx: " << factor_ob_idx << std::endl;
+        logi("[factor ob {}] ob idx: {}", process_id_, factor_ob_idx);
         int sec_idx;
         // 按在Params.factor_names中确定好的因子顺序，逐股票写出因子值，同时注意只写出本进程对应的股票的数据
         for (int i = 0; i < col_size_; i++) {
             sec_idx = sec_idx_dict_[code_list_[i]];
-            v_shm_[0][row_length+sec_idx] = order_num_[i];
-            v_shm_[1][row_length+sec_idx] = trade_num_[i];
+            v_shm_[0][row_length + sec_idx] = order_num_[i];
+            v_shm_[1][row_length + sec_idx] = trade_num_[i];
         }
         this->reset();
     }
@@ -176,58 +173,111 @@ public:
     /// @param securityid 写出数据的股票代码
     void onFactorOB(int factor_ob_idx, int row_length, int securityid) override {
         int sec_idx = sec_idx_dict_[securityid];
-        v_shm_[0][row_length+sec_idx] = order_num_[my_sec_idx_[securityid]];
-        v_shm_[1][row_length+sec_idx] = trade_num_[my_sec_idx_[securityid]];
+        v_shm_[0][row_length + sec_idx] = order_num_[my_sec_idx_[securityid]];
+        v_shm_[1][row_length + sec_idx] = trade_num_[my_sec_idx_[securityid]];
         this->reset(securityid);
     }
 
 protected:
-    ObjectPoolST<MyOrder> my_order_pool_;    // 委托对象池
-    ObjectPoolST<MyTrade> my_trade_pool_;    // 成交对象池
+    ObjectPoolST<MyOrder> my_order_pool_; // 委托对象池
+    ObjectPoolST<MyTrade> my_trade_pool_; // 成交对象池
 
-	std::unordered_map<int, std::unordered_map<seqnum_t, MyOrder *>> ori_order_map;     // 分股票的原始订单委托序列
-    std::unordered_map<int, std::unordered_map<seqnum_t, MyTrade *>> ori_trade_map;     // 分股票的原始订单成交序列
-    std::unordered_map<int, int> my_sec_idx_;                                           // 维护一个本spi处理的股票的下标序列
+    std::unordered_map<int, std::unordered_map<seqnum_t, MyOrder *>> ori_order_map; // 分股票的原始订单委托序列
+    std::unordered_map<int, std::unordered_map<seqnum_t, MyTrade *>> ori_trade_map; // 分股票的原始订单成交序列
+    std::unordered_map<int, int> my_sec_idx_; // 维护一个本spi处理的股票的下标序列
 
-	std::vector<double> order_num_;     // 要写的因子1：委托笔数
-	std::vector<double> trade_num_;     // 要写的因子2：成交笔数
-    size_t col_size_;                   // 列的长度，即本spi处理的股票总数
+    std::vector<double> order_num_; // 要写的因子1：委托笔数
+    std::vector<double> trade_num_; // 要写的因子2：成交笔数
+
+    size_t col_size_;         // 列的长度，即本spi处理的股票总数
+    size_t aligned_col_size_; // 实际列长度，为SIMD对齐准备的股票个数
 };
 
-int main(int argc, char* argv[]) {
-    // 调用时输入日期，否则默认运行当天
-    std::string date_input = "";
-    if (argc > 1) {
-        date_input = argv[1];
-    }
-    std::string use_date = get_date_string(date_input);
-    std::string sim_date;
-    std::remove_copy(use_date.begin(), use_date.end(), std::back_inserter(sim_date), '-');
+/**
+ * @brief MoneyFlow因子生成器演示程序的主入口点
+ *
+ * 解析命令行参数，设置日志系统，并启动撮合引擎来生成资金流相关的因子数据。
+ * 支持委托笔数和成交笔数两个基本因子的计算。
+ *
+ * 支持的命令行参数：
+ * - -d, --date: 指定数据处理的日期 (YYYY-MM-DD格式)
+ * - -p, --pnum: 指定工作进程数量
+ * - -l, --logs_dir: 指定日志文件目录
+ * - -h, --help: 显示帮助信息
+ *
+ * @param argc 命令行参数数量
+ * @param argv 命令行参数数组
+ *
+ * @return 0 成功完成，非0表示错误
+ */
+int main(int argc, char *argv[]) {
 
-    // 调用时输入端口增量
-    int incre_port = 0;
-    if (argc > 2) {
-        incre_port = std::stoi(argv[2]);
+    // 接收处理命令行参数
+    cxxopts::Options options(argv[0],
+                             "Basic Factor Generator Demo\n"
+                             "此程序用于生成基本的交易因子数据。\n\n"
+                             "用法示例：\n"
+                             "  ./demo -d 2023-01-01 -i 0 -c 3\n"
+                             "  ./demo 2023-01-01 0 3\n"
+                             "  ./demo \n");
+    auto opts_builder = options.add_options();
+    opts_builder("d,date", "指定数据处理的日期...", cxxopts::value<std::string>()->default_value(""));
+    opts_builder("i,incre_port", "指定增量端口...", cxxopts::value<int>()->default_value("0"));
+    opts_builder("p,pnum", "指定工作进程数量...", cxxopts::value<int>()->default_value("3"));
+    opts_builder("skip_unlink", "跳过共享内存的自动清理（调试用）...", cxxopts::value<bool>()->default_value("false"));
+    opts_builder("h,help", "打印此帮助信息...");
+
+    options.parse_positional({"date", "incre_port", "pnum"});
+
+    // 解析命令行参数
+    cxxopts::ParseResult result;
+    try {
+        result = options.parse(argc, argv);
+    } catch (const cxxopts::exceptions::exception &e) {
+        loge("解析选项错误: {}", e.what());
+        std::cerr << options.help() << std::endl;
+        return 1;
     }
+    if (result.count("help")) {
+        std::cout << options.help() << std::endl;
+        return 0;
+    }
+
+    // 提取已经解析好的命令行参数
+    std::string date_input = result["date"].as<std::string>();
+    int incre_port = result["incre_port"].as<int>();
+    int process_num = result["pnum"].as<int>();
+    bool skip_unlink = result["skip_unlink"].as<bool>();
+
+    std::string use_date = get_date_string(date_input);
 
     /*********************
      * api的初始化分为以下三步：
      * 1、创建一个接收回报的类，该类继承自MatchEngineSPI，用来接收撮合引擎过程中接收到的逐笔委托和成交
      * 2、调用createMatchAPI接口，创建一个API对象，该对象用来启动撮合和和查询盘口
      * 3、调用registerSpi接口，将回报接收类对象传进请求类对象中
-    *************************/
+     *************************/
     MatchEngineAPI *match_api = MatchEngineAPI::createMatchAPI();
     auto match_spi = new DemoMatchEngineSPI();
     match_api->registerSPI(match_spi);
 
+    // 设置参数
     MatchParam param;
     param.factor_names = std::vector<std::string>{"order_num", "trade_num"};
-    param.process_num = 3;
+    param.incre_port = incre_port;
+    param.process_num = process_num;
     param.recv_market = "sz";
+    param.skip_unlink = skip_unlink;
+    param.log_level = 1;
     match_api->setParam(param);
 
     // 启动撮合，进程会阻塞在该函数
-    match_api->startMatch(use_date, incre_port);
+    match_api->startMatch(use_date);
 
-    // api在结束后会自动保存，清理内存，用户在此处可直接退出
+    // 用户可调用saveData函数来保存数据
+    match_api->saveData(param.factor_names, "Test1", "fileSystem", "1min,stock");
+
+    // 结束后建议手动调用close函数
+    match_api->close();
+    return 0;
 }

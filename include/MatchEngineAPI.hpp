@@ -2,51 +2,96 @@
 
 #include "MatchEngineAPIStruct.hpp"
 
-class MatchEngine;
+/**
+ * @file MatchEngineAPI.hpp
+ * @brief 撮合引擎API接口和SPI接口定义。
+ *
+ * 该文件定义了用户与撮合引擎交互的高级接口 MatchEngineAPI，
+ * 以及允许用户注入自定义逻辑的服务提供接口 MatchEngineSPI。
+ * 同时定义了撮合引擎核心数据查询接口 IMatchEngineDataView。
+ */
 
+class IMatchEngineDataView;
+
+/**
+ * @class MatchEngineSPI
+ * @brief 撮合引擎服务提供接口（SPI）。
+ *
+ * 这是一个回调接口，允许用户自定义逻辑来响应撮合引擎的内部事件，
+ * 例如订单添加前后、成交前后、因子计算等。用户需要实现此接口以扩展系统功能。
+ */
 class MatchEngineSPI {
 public:
     virtual ~MatchEngineSPI() = default;
 
-    /// @brief 初始化函数，会在setAPI之后被调用
+    /**
+     * @brief 初始化函数，会在 setAPI 之后被调用。
+     */
     virtual void Init() {}
 
-    /// @brief 在当笔盘口更新前，接收逐笔委托
-    /// @param order 委托数据
+    /**
+     * @brief 在当笔盘口更新前，接收逐笔委托。
+     *
+     * @param order 委托数据。
+     */
     virtual void onBeforeAddOrder(const UnifiedRecord *order) {}
 
-    /// @brief 在当笔盘口更新前，接收逐笔成交
-    /// @param trade 成交数据
+    /**
+     * @brief 在当笔盘口更新前，接收逐笔成交。
+     *
+     * @param trade 成交数据。
+     */
     virtual void onBeforeAddTrade(const UnifiedRecord *trade) {}
 
-    /// @brief 在当笔盘口更新后，接收逐笔委托
-    /// @param order 委托数据
+    /**
+     * @brief 在当笔盘口更新后，接收逐笔委托。
+     *
+     * @param order 委托数据。
+     */
     virtual void onAfterAddOrder(const UnifiedRecord *order) {}
 
-    /// @brief 在当笔盘口更新后，接收逐笔成交
-    /// @param trade 成交数据
+    /**
+     * @brief 在当笔盘口更新后，接收逐笔成交。
+     *
+     * @param trade 成交数据。
+     */
     virtual void onAfterAddTrade(const UnifiedRecord *trade) {}
 
-    /// @brief 将本对象所维护的所有股票的因子值输出到共享内存中，该函数必须实现
-    /// @param factor_ob_idx 因子ob的次数索引，也等于其在共享内存中应写入的行号
-    /// @param row_length 当前行数据起始点
+    /**
+     * @brief 将本对象所维护的所有股票的因子值输出到共享内存中，该函数必须实现。
+     *
+     * @param factor_ob_idx
+     * 因子订单簿（OrderBook）的次数索引，也等于其在共享内存中应写入的行号。
+     * @param row_length 当前行数据起始点。
+     */
     virtual void onFactorOB(int factor_ob_idx, int row_length) {}
 
-    /// @brief 将函数指定的股票的因子值输出到共享内存中，该函数必须实现
-    /// @param factor_ob_idx 因子ob的次数索引，也等于其在共享内存中应写入的行号
-    /// @param row_length 当前行数据起始点
-    /// @param securityid 写出数据的股票代码
+    /**
+     * @brief 将函数指定的股票的因子值输出到共享内存中，该函数必须实现。
+     *
+     * @param factor_ob_idx
+     * 因子订单簿（OrderBook）的次数索引，也等于其在共享内存中应写入的行号。
+     * @param row_length 当前行数据起始点。
+     * @param securityid 写出数据的股票代码。
+     */
     virtual void onFactorOB(int factor_ob_idx, int row_length, int securityid) {}
 
-    /// @brief API注入函数，用户无需关心
-    /// @param api 
-    void setAPI(
-        MatchEngine* api, 
-        std::vector<double *> v_shm, 
-        std::unordered_map<int, int> sec_idx_dict,
-        std::vector<int> code_list,
-        int process_id
-        ) {
+    /**
+     * @brief API注入函数，用户无需关心。
+     *
+     * 用于将 MatchEngine 实例、共享内存指针等注入到 SPI 中。
+     *
+     * @param api 指向 IMatchEngineDataView 接口的指针，用于在回调函数中调用API的接口函数。
+     * @param v_shm 按照 API 中 setParam 函数输入的 factor_names 顺序排列的共享内存指针。
+     * @param sec_idx_dict 股票列索引字典，为当天所有股票对应的共享内存列索引。
+     * @param code_list 该 SPI 需要处理的股票代码列表。
+     * @param process_id 进程 ID。
+     */
+    void setAPI(IMatchEngineDataView *api,
+                std::vector<double *> v_shm,
+                std::unordered_map<int, int> sec_idx_dict,
+                std::vector<int> code_list,
+                int process_id) {
         api_ = api;
         v_shm_ = v_shm;
         sec_idx_dict_ = sec_idx_dict;
@@ -55,59 +100,109 @@ public:
     }
 
 protected:
-    MatchEngine *api_ = nullptr;                    // 支持在回调函数中调用API的接口函数，具体见MatchEngine函数定义
-    std::vector<double *> v_shm_;                   // 按照API中setParam函数输入的factor_names顺序排列的共享内存指针
-    std::unordered_map<int, int> sec_idx_dict_;     // 股票列索引字典，为当天所有股票对应的共享内存列索引
-    std::vector<int> code_list_;                    // 该个spi需要处理的股票代码
-    int process_id_;                                // 进程id
+    /**
+     * @brief MatchEngine 接口指针。
+     *
+     * 支持在回调函数中调用 API 的接口函数，具体见 MatchEngine 函数定义。
+     */
+    IMatchEngineDataView *api_ = nullptr;
+    /**
+     * @brief 共享内存指针向量。
+     *
+     * 按照 API 中 setParam 函数输入的 factor_names 顺序排列。
+     */
+    std::vector<double *> v_shm_;
+    /**
+     * @brief 股票列索引字典。
+     *
+     * 为当天所有股票对应的共享内存列索引。
+     */
+    std::unordered_map<int, int> sec_idx_dict_;
+    /**
+     * @brief 该 SPI 需要处理的股票代码列表。
+     */
+    std::vector<int> code_list_;
+    /**
+     * @brief 进程 ID。
+     */
+    int process_id_;
 };
-
-
+/**
+ * @class MatchEngineAPI
+ * @brief 撮合引擎高级API接口。
+ *
+ * 这是面向用户的主要API接口，负责撮合引擎的生命周期管理和配置。
+ * 用户通过此接口来启动、配置和保存数据。
+ */
 class MatchEngineAPI {
 public:
-    /// @brief 创建API
-    /// @return 创建出的API接口对象
+    /**
+     * @brief 创建API实例。
+     *
+     * @return 创建出的API接口对象。
+     */
     static MatchEngineAPI *createMatchAPI();
-    
-    /// @brief 注册回调接口
-    /// @param spi 回调接口指针
+
+    /**
+     * @brief 注册回调接口。
+     *
+     * @param spi 回调接口指针。
+     */
     virtual void registerSPI(MatchEngineSPI *spi) = 0;
 
-    /// @brief 设置参数，具体参数设置请查看结构体定义
-    /// @param param 
+    /**
+     * @brief 设置参数。
+     *
+     * @param param 包含各种配置参数的结构体，具体参数设置请查看 MatchParam
+     * 结构体定义。
+     */
     virtual void setParam(MatchParam param) = 0;
 
-    /// @brief 开始匹配
-    /// @param date 日期，需与回放日期一致，格式%Y-%m-%d，默认运行当天
-    /// @param incre_port 增量端口，多开时使用，默认为0
-    /// @return 0:表示接口调用正常，其他值表示接口调用异常 
-    virtual int startMatch(std::string date = "", size_t incre_port = 0) = 0;
+    /**
+     * @brief 开始匹配。
+     *
+     * @param date 交易日期，需与回放日期一致，格式为%Y-%m-%d，默认运行当天。
+     * @return 0表示接口调用正常，其他值表示接口调用异常。
+     */
+    virtual int startMatch(std::string date = "") = 0;
 
-    /// @brief 保存得到的字段数据。一次调用保存一个logic。
-    /// @param data_name 保存的数据因子名称。如果保存因子数据，填写因子名称；如果保存3s盘口数据，可用全局变量MarketCols。
-    /// @param logic_name 逻辑名称，将作为因子名称的前缀，该字段作用等同于文件系统中logic_name作用。可填空，例如保存3s盘口数据时可填空。
-    /// @param save_type 保存数据格式，支持"parquet", "fileSystem"
-    /// @param file_sys_prefix 文件系统保存前缀，仅当save_type==fileSystem时有效。格式为"频率,类别"
-    /// @param mode 写入模式，仅当save_type==fileSystem时有效，分为"write", "fix"，修复数据时使用fix
-    virtual void saveData(
-        std::vector<std::string>& data_name, 
-        std::string logic_name,
-        std::string save_type,
-        std::string file_sys_prefix = "1min,stock",
-        std::string mode = "write"
-        ) = 0;
+    /**
+     * @brief 保存得到的字段数据。
+     *
+     * 一次调用保存一个逻辑（logic）的数据。
+     *
+     * @param data_name 要保存的数据因子名称列表。如果保存因子数据，填写因子名称；如果保存3s盘口数据，可用全局变量
+     * MarketCols。
+     * @param logic_name 逻辑名称，将作为因子名称的前缀，该字段作用等同于文件系统中 logic_name
+     * 作用。可填空，例如保存3s盘口数据时可填空。
+     * @param save_type 保存数据格式，支持"parquet", "fileSystem"。
+     * @param file_sys_prefix 文件系统保存前缀，仅当 save_type == "fileSystem" 时有效。格式为"频率,类别"。
+     * @param mode 写入模式，仅当 save_type == "fileSystem" 时有效，分为"write", "fix"，修复数据时使用 fix。
+     */
+    virtual void saveData(std::vector<std::string> &data_name,
+                          std::string logic_name,
+                          std::string save_type,
+                          std::string file_sys_prefix = "1min,stock",
+                          std::string mode = "write") = 0;
 
-    /// @brief 手动关闭接口，清理内存
+    /**
+     * @brief 手动关闭接口，清理内存。
+     */
     virtual void close() = 0;
 };
 
-
-class MatchEngine {
+/**
+ * @class IMatchEngineDataView
+ * @brief 撮合引擎数据视图接口。
+ *
+ * 提供对指定股票的指定盘口数据的只读访问，主要用于SPI回调函数中查询实时订单簿状态。
+ */
+class IMatchEngineDataView {
 public:
     /// @brief 获取指定股票的指定盘口的数据
     /// @param securityid 股票代码
     /// @param side 盘口方向
     /// @param n 盘口层数
-    /// @return PriceLevel
+    /// @return PriceLevel 价格档位指针，如果股票不存在则返回nullptr
     virtual PriceLevel *getPriceLevel(int securityid, Side side, size_t n) = 0;
 };

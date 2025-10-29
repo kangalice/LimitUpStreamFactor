@@ -3,14 +3,10 @@
     "path_L2_ori": "/oss/tick_data/L2",
     "path_offline_save": "/mnt/data0/BasicData/StockDB/QPData/L2/kline_3s",
     "path_factor_save": "/mnt/data0/BasicData/StockDB/QPData/L2/base_factor",
+    "path_logs": "./logs",
 
     "mode": "offline",
-    "zmq_port": {
-        "mode": "ipc",
-        "sh": "ipc:///tmp/quote_line_zmq_5565",
-        "sz": "ipc:///tmp/quote_line_zmq_5566"
-    },
-    "offline_sleep_sec": 25,
+    "offline_sleep_sec": 2,
 
     "save_kline_data": false
 }

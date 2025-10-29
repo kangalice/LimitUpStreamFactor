@@ -22,25 +22,35 @@
 
 ## 编译过程
 
-1. 需要用户从源码编译安装ZMQ(libzmq,cppzmq)，pybind11两个外部库。
+1. 确保用户安装了Conan，可以直接通过以下代码安装并检查
 
-2. 编译项目
+```shell
+pip install conan
+conan --version
+```
+
+2. 查找目录/mnt/data0/BasicData/tools/InternalCppLib下最新库版本，并运行最新库版本文件夹下的user_install.sh脚本，该脚本会自动将InternalCppLib安装到~/.conan2中。同时注意调整conanfile.txt中对于internalcpplib依赖的版本。
+
+3. 在项目目录下运行以下代码
 ```shell
 mkdir build
+conan install . --build=missing
 cd build
-cmake ..
+cmake .. --preset conan-release
+cd Release
 make
 ```
 
 ## 调用方法
 
-1. 直接调用可执行文件：先调用demo，然后调用offline_data，不输入日期默认运行调用当天的撮合，可以通过位置输入两个参数：
+1. 直接调用可执行文件：先调用offline_data，然后调用demo，不输入日期默认运行调用当天的撮合，可以通过位置输入三个参数：
 ```shell
-./offline_data [date] [incre_port]
-./demo [date] [incre_port]
+./offline_data [date] [incre_port] [consumer_pnum]
+./demo [date] [incre_port] [pnum]
 ```
 - date: 日期，格式为%Y-%m-%d，不输入默认调用当天。
-- incre_port: 端口偏移量，用于多进程同时运行脚本。
+- incre_port: 端口偏移量，用于多进程同时运行脚本，不输入默认为0。
+- consumer_pnum/pnum: 消费者(FieldEngine)生产进程数，两个脚本输入的参数需要一致，不输入默认为3。
 
 ## 字段开发说明
 

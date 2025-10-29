@@ -57,26 +57,32 @@ def get_offline_hdf_data(name: str, date: str, sec_list: list) -> list:
     return res_list
 
 
-def _save_one_shm_parquet(name, row_index, col_index, dtype, path_save, date, save_name):
+def _save_one_shm_parquet(name, row_index, col_index, dtype, path_save, date, save_name, align_cut_length):
     try:
         shm = shared_memory.SharedMemory(name=name)
         resource_tracker.unregister(shm._name, 'shared_memory')
         shm_array = np.ndarray((len(row_index), len(col_index)), dtype=dtype, buffer=shm.buf)
         shm_df = pd.DataFrame(shm_array, index=row_index, columns=col_index)
 
-        path_file = os.path.join(path_save, date, save_name + '.parquet')
-        os.makedirs(os.path.dirname(path_file), exist_ok=True)
-        shm_df.to_parquet(path_file)
+        if align_cut_length > 0:
+            shm_df = shm_df.iloc[:, :-align_cut_length]
+
+        os.makedirs(os.path.join(path_save, date), exist_ok=True)
+        shm_df.to_parquet(os.path.join(path_save, date, save_name + '.parquet'))
     except:
         print(traceback.format_exc())
 
-def _get_shm_dfs(name, row_index, col_index, dtype, temp_save=False):
+def _get_shm_dfs(name, row_index, col_index, dtype, align_cut_length, temp_save=False):
     try:
         print(f'shm df {name} row_index({len(row_index)}), col_index({len(col_index)}), dtype({dtype})')
         shm = shared_memory.SharedMemory(name=name)
         resource_tracker.unregister(shm._name, 'shared_memory')
         shm_array = np.ndarray((len(row_index), len(col_index)), dtype=dtype, buffer=shm.buf)
         shm_df = pd.DataFrame(shm_array, index=row_index, columns=col_index, copy=True)
+
+        if align_cut_length > 0:
+            shm_df = shm_df.iloc[:, :-align_cut_length]
+
         if temp_save:
             shm_df.to_parquet(f'{name}.parquet')
         print(f'get {name} shm done, {shm_df}')
@@ -94,7 +100,8 @@ def save_shm_data(
     path_save: str,
     save_type: str,
     file_sys_prefix: str,
-    mode: str
+    mode: str,
+    align_cut_length: int
     ):
     date = pd.to_datetime(date).strftime('%Y%m%d')
     row_index = pd.to_datetime(
@@ -106,13 +113,13 @@ def save_shm_data(
 
     if save_type == 'parquet':
         Parallel(njobs)(delayed(_save_one_shm_parquet)(
-            name, row_index, col_index, dtype, path_save, date, save_names[i]) 
+            name, row_index, col_index, dtype, path_save, date, save_names[i], align_cut_length) 
             for i, name in enumerate(shm_names)
             )
         
     elif save_type == 'fileSystem':
         dfs = Parallel(njobs)(delayed(_get_shm_dfs)(
-            name, row_index, col_index, dtype) 
+            name, row_index, col_index, dtype, align_cut_length) 
             for i, name in enumerate(shm_names)
             )
         print('get shm dfs done')
