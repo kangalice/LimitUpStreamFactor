@@ -34,9 +34,8 @@ public:
         std::cout << "[spi] handling code list: " << code_list_[0] << "~" << code_list_[code_list_.size() - 1]
                   << std::endl;
         col_size_ = code_list_.size();
-        aligned_col_size_ = align_col_size(col_size_);
 
-        for (int i = 0; i < aligned_col_size_; i++) {
+        for (int i = 0; i < col_size_; i++) {
             ori_order_map[code_list_[i]] = std::unordered_map<seqnum_t, MyOrder *>();
             ori_trade_map[code_list_[i]] = std::unordered_map<seqnum_t, MyTrade *>();
             my_sec_idx_[code_list_[i]] = i;
@@ -45,8 +44,8 @@ public:
         // ObjectPoolST<MyOrder> my_order_pool_ = ObjectPoolST<MyOrder>(10, 1<<23);  // 10 * 1<<23 ≈ 80m 条的数据
         // ObjectPoolST<MyTrade> my_trade_pool_ = ObjectPoolST<MyTrade>(10, 1<<23);
 
-        order_num_.resize(aligned_col_size_, 0);
-        trade_num_.resize(aligned_col_size_, 0);
+        order_num_.resize(col_size_, 0);
+        trade_num_.resize(col_size_, 0);
     }
 
     /// 状态变量更新函数
@@ -93,6 +92,12 @@ public:
             //     PriceLevel *price_level = api_->getPriceLevel(order->securityid, OrderSide::Bid, 2);
             //     // ...
             // }
+
+            // // 如果要获取历史3s盘口数据示例：
+            // double ask1_latest = api_->get3sKlineLatest(order, "ask1");       // 获取该股票最近一次
+            // double ask1_by_idx = api_->get3sKlineByIdx(order, "ask1", 97);    // 按该股票OB次数索引获取
+            // double ask1_by_time = api_->get3sKlineByTime(order, "ask1", 93015000);    // 按时间获取
+
         } else {
             // 处理撤单数据
         }
@@ -193,25 +198,7 @@ protected:
     size_t aligned_col_size_;    // 实际列长度，为SIMD对齐准备的股票个数
 };
 
-/**
- * @brief Basic因子生成器演示程序的主入口点
- *
- * 解析命令行参数，设置日志系统，并启动撮合引擎来生成基本的交易因子数据。
- * 支持委托笔数和成交笔数两个基本因子的计算。
- *
- * 支持的命令行参数：
- * - -d, --date: 指定数据处理的日期 (YYYY-MM-DD格式)
- * - -p, --pnum: 指定工作进程数量
- * - -l, --logs_dir: 指定日志文件目录
- * - -h, --help: 显示帮助信息
- *
- * @param argc 命令行参数数量
- * @param argv 命令行参数数组
- *
- * @return 0 成功完成，非0表示错误
- */
 int main(int argc, char *argv[]) {
-
     // 接收处理命令行参数
     cxxopts::Options options(argv[0],
                              "Basic Factor Generator Demo\n"
@@ -275,9 +262,9 @@ int main(int argc, char *argv[]) {
     match_api->startMatch(use_date);
 
     // 用户可调用saveData函数来保存数据
-    match_api->saveData(param.factor_names, "Test1", "fileSystem", "1min,stock");
+    // match_api->saveData(param.factor_names, "Test1", "fileSystem", "1min,stock");
     // 无文件系统保存权限的用户可以保存为parquet文件
-    // match_api->saveData(param.factor_names, "Test1", "parquet");
+    match_api->saveData(param.factor_names, "Test1", "parquet");
 
     // 结束后建议手动调用close函数
     match_api->close();

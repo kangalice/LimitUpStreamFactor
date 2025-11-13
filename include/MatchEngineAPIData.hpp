@@ -15,9 +15,8 @@
  * 这些定义在整个撮合引擎系统中共享。
  */
 
-typedef double price_t, amt_t;    // 价格和金额类型
-typedef int64_t seqnum_t;         // 序列号类型
-typedef int32_t qty_t;            // 数量类型
+typedef double price_t, amt_t;      // 价格和金额类型
+typedef int64_t seqnum_t, qty_t;    // 序列号和数量类型
 
 static price_t MARKET_ASK_PRICE = 9999999;    // 市场卖方最优价格（极大值）
 static price_t MARKET_BID_PRICE = 0;          // 市场买方最优价格（极小值）
@@ -34,6 +33,7 @@ static const std::string SHM_QUOTE_KLINE = "quotekline";        // 行情K线字
 
 // 组合后的共享内存前缀
 static const std::string FIELD_OUPUT_SHM_PREFIX = PROJ_PREFIX + "_" + SHM_QUOTE_KLINE;    // 行情字段共享内存前缀
+static const char *LOG_HEADER_PATTERN = "{YmdHMSf} {s:<16} {l}[{t:<6}]";
 
 static int OB_DEPTH = 10;    // 订单簿深度 (例如，OB_DEPTH = 10 表示维护买卖双方各10档盘口)
 

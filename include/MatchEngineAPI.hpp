@@ -205,4 +205,22 @@ public:
     /// @param n 盘口层数
     /// @return PriceLevel 价格档位指针，如果股票不存在则返回nullptr
     virtual PriceLevel *getPriceLevel(int securityid, Side side, size_t n) = 0;
+
+    /// @brief 获取指定股票的3s盘口数据
+    /// @param record 一条 UnifiedRecord 消息，包含所需的 securityid
+    /// @param key 数据键值，例如"ask1", "bid1", "askv1", "bidv1"
+    /// @param idx 数据索引，表示shm中的第几行
+    /// @return double 3s盘口数据，如果股票不存在或字段不存在则返回NAN
+    virtual double get3sKlineByIdx(const UnifiedRecord *record, const std::string &key, size_t idx) = 0;
+
+    /// @brief 获取指定股票的3s盘口数据（通过时间查询）
+    /// @param record 一条 UnifiedRecord 消息，包含所需的 securityid
+    /// @param key 数据键值
+    /// @param ob_time 订单簿时间，用于从ob_times_idx_中查找对应的行索引
+    virtual double get3sKlineByTime(const UnifiedRecord *record, const std::string &key, int ob_time) = 0;
+
+    /// @brief 获取指定股票的3s盘口数据（最近更新的)
+    /// @param record 一条 UnifiedRecord 消息，包含所需的 securityid, parse_time, exchange
+    /// @param key 数据键值
+    virtual double get3sKlineLatest(const UnifiedRecord *record, const std::string &key) = 0;
 };

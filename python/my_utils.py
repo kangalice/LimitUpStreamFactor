@@ -67,8 +67,9 @@ def _save_one_shm_parquet(name, row_index, col_index, dtype, path_save, date, sa
         if align_cut_length > 0:
             shm_df = shm_df.iloc[:, :-align_cut_length]
 
-        os.makedirs(os.path.join(path_save, date), exist_ok=True)
-        shm_df.to_parquet(os.path.join(path_save, date, save_name + '.parquet'))
+        path_file = os.path.join(path_save, date, save_name + '.parquet')
+        os.makedirs(os.path.dirname(path_file), exist_ok=True)
+        shm_df.to_parquet(path_file)
     except:
         print(traceback.format_exc())
 
