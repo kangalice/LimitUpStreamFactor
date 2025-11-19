@@ -81,17 +81,22 @@ enum class Type : uint8_t {
     Cancel = 3,    // 撤单
     Trade = 4,     // 成交
     Status = 5,    // 产品状态
-    End = 6        // 结束标识符
+    End = 6,       // 结束标识符
+    CallOB = 7     // 9:25:03~9:30:00 OB提示符
 };
 
-#pragma pack(push, 1)
-/**
- * @struct UnifiedRecord
- * @brief 统一市场数据记录结构体。
- *
- * 定义了从市场接收到的统一数据记录格式，包含订单、成交、撤单等关键信息。
- */
-struct UnifiedRecord {
+enum class TradeStatus : uint8_t {
+    Susp = 0,     // 停牌
+    Start = 1,    // 启动
+    Ocall = 2,    // 开盘集合竞价
+    Trade = 3,    // 连续竞价
+    Ccall = 4,    // 收盘集合竞价
+    Close = 5,    // 闭市
+    Endtr = 6,    // 交易结束
+    Break = 7,    // 休市
+};
+
+struct alignas(64) UnifiedRecord {
     Type type;              // 类型
     Exchange market;        // 市场
     int32_t channel;        // 行情通道
@@ -105,7 +110,24 @@ struct UnifiedRecord {
     Side side;              // 买卖方向
     seqnum_t biz_index;     // 业务序号
 };
-#pragma pack(pop)
+
+struct alignas(64) MarketRecord {
+    int32_t updatetime;          // 数据生成时间
+    int32_t securityid;          // 股票代码
+    TradeStatus trade_status;    // 交易代码状态
+    qty_t tradnum;               // 成交笔数
+    qty_t tradv;                 // 成交量
+    amt_t turnover;              // 成交金额
+    price_t lastp;               // 最新价
+    qty_t totalaskvol;           // 委托卖出总量
+    price_t wavgaskpri;          // 加权平均卖价
+    qty_t totalbidvol;           // 委托买入总量
+    price_t wavgbidpri;          // 加权平均买价
+    price_t ask[10];             // 卖方盘口价
+    price_t askv[10];            // 卖方盘口量
+    price_t bid[10];             // 买方盘口价
+    price_t bidv[10];            // 买方盘口量
+};
 
 /**
  * @struct MatchParam

@@ -6,7 +6,7 @@
     "path_logs": "./logs",
 
     "mode": "offline",
-    "offline_sleep_sec": 2,
+    "offline_sleep_sec": 5,
 
     "save_kline_data": false
 }
