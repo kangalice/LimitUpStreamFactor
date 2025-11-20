@@ -144,5 +144,7 @@ struct MatchParam {
     size_t process_num = 3;                   // 进程数量，可以是1,3,6,9...等进程数量
     std::string recv_market = "sz";           // 接收的市场类别，仅在process_num=1时生效，可以是sz/sh
     bool skip_unlink = false;                 // 是否跳过共享内存的自动清理，默认false
+    bool check_error = false;                 // 是否要进行spi错误的检查，如果需要跑上交所21年以前的历史数据且字段逻辑
+                                              // 必须要数据保序，则开启该选项。该选项会较大的减慢代码运行速度。
     size_t log_level = 1;                     // 日志等级
 };

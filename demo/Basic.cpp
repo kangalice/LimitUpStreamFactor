@@ -212,6 +212,8 @@ int main(int argc, char *argv[]) {
     opts_builder("i,incre_port", "指定增量端口...", cxxopts::value<int>()->default_value("0"));
     opts_builder("p,pnum", "指定工作进程数量...", cxxopts::value<int>()->default_value("3"));
     opts_builder("skip_unlink", "跳过共享内存的自动清理（调试用）...", cxxopts::value<bool>()->default_value("false"));
+    opts_builder(
+        "check_error", "是否要进行spi错误的检查（算历史用）...", cxxopts::value<bool>()->default_value("false"));
     opts_builder("h,help", "打印此帮助信息...");
 
     options.parse_positional({"date", "incre_port", "pnum"});
@@ -235,6 +237,7 @@ int main(int argc, char *argv[]) {
     int incre_port = result["incre_port"].as<int>();
     int process_num = result["pnum"].as<int>();
     bool skip_unlink = result["skip_unlink"].as<bool>();
+    bool check_error = result["check_error"].as<bool>();
 
     std::string use_date = get_date_string(date_input);
 
@@ -256,6 +259,7 @@ int main(int argc, char *argv[]) {
     param.recv_market = "sz";
     param.skip_unlink = skip_unlink;
     param.log_level = 1;
+    param.check_error = check_error;
     match_api->setParam(param);
 
     // 启动撮合，进程会阻塞在该函数
