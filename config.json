@@ -4,8 +4,9 @@
     "path_offline_save": "/mnt/data0/BasicData/StockDB/QPData/L2/kline_3s",
     "path_factor_save": "/mnt/data0/BasicData/StockDB/QPData/L2/base_factor",
     "path_logs": "./logs",
+    "daily_use_data_path": "/mnt/public_shared_files/temp_daily_use_data",
     "mode": "offline",
     "offline_sleep_sec": 5,
-    "consumer_ready_timeout_ms": 60000,
+    "consumer_ready_timeout_ms": 90000,
     "save_kline_data": false
 }

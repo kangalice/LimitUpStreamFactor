@@ -41,3 +41,8 @@ target_link_libraries(demo
     cxxopts::cxxopts
     fmtlog::fmtlog
 )
+
+set_target_properties(demo PROPERTIES
+    INSTALL_RPATH "$ORIGIN/../lib"
+    BUILD_WITH_INSTALL_RPATH TRUE
+)

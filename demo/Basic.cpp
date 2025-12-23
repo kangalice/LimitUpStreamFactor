@@ -260,6 +260,7 @@ int main(int argc, char *argv[]) {
     param.skip_unlink = skip_unlink;
     param.log_level = 1;
     param.check_error = check_error;
+    param.factor_interver_ms = 900000;
     match_api->setParam(param);
 
     // 启动撮合，进程会阻塞在该函数
