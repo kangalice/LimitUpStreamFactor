@@ -177,6 +177,11 @@ public:
     /// @param row_length 当前行数据起始点
     /// @param securityid 写出数据的股票代码
     void onFactorOB(int factor_ob_idx, int row_length, int securityid) override {
+        if (factor_ob_idx >= max_factor_ob_idx_) {
+            std::cout << "[factor ob " << process_id_ << "] ob idx: " << factor_ob_idx << std::endl;
+            logi("[factor ob {}] ob idx: {}", process_id_, factor_ob_idx);
+            max_factor_ob_idx_++;
+        }
         int sec_idx = sec_idx_dict_[securityid];
         v_shm_[0][row_length + sec_idx] = order_num_[my_sec_idx_[securityid]];
         v_shm_[1][row_length + sec_idx] = trade_num_[my_sec_idx_[securityid]];
@@ -196,6 +201,8 @@ protected:
 
     size_t col_size_;            // 列的长度，即本spi处理的股票总数
     size_t aligned_col_size_;    // 实际列长度，为SIMD对齐准备的股票个数
+
+    int max_factor_ob_idx_ = 0;    // 当前最大的factor_ob_idx
 };
 
 int main(int argc, char *argv[]) {
@@ -260,7 +267,7 @@ int main(int argc, char *argv[]) {
     param.skip_unlink = skip_unlink;
     param.log_level = 1;
     param.check_error = check_error;
-    param.factor_interver_ms = 900000;
+    param.factor_interver_ms = 60000;
     match_api->setParam(param);
 
     // 启动撮合，进程会阻塞在该函数
