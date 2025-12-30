@@ -147,4 +147,6 @@ struct MatchParam {
     bool check_error = false;                 // 是否要进行spi错误的检查，如果需要跑上交所21年以前的历史数据且字段逻辑
                                               // 必须要数据保序，则开启该选项。该选项会较大的减慢代码运行速度。
     size_t log_level = 1;                     // 日志等级
+    size_t bind_cpu_start_id =
+        -1;    // 如果该值为-1，则不进行绑核；如果>=0，则从对应的cpu_id开始，顺序绑process_num个核心
 };

@@ -268,6 +268,7 @@ int main(int argc, char *argv[]) {
     param.log_level = 1;
     param.check_error = check_error;
     param.factor_interver_ms = 60000;
+    param.bind_cpu_start_id = -1;
     match_api->setParam(param);
 
     // 启动撮合，进程会阻塞在该函数
