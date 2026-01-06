@@ -5,7 +5,7 @@
 ```shell
 ./
 ├── CMakeLists.txt
-├── config.json                     # 配置参数文件，包括路径、端口等参数
+├── config.yaml                     # 配置参数文件，包括路径、端口等参数
 ├── docs                            # 项目文档
 ├── include                         # 头文件，包括外部库
 │   ├── MatchEngineAPI.hpp          # API和SPI接口定义
@@ -90,7 +90,7 @@ make
 ```shell
 ./
 ├── CMakeLists.txt
-├── config.json                     # 配置参数文件，包括路径、端口等参数
+├── config.yaml                     # 配置参数文件，包括路径、端口等参数
 ├── docs                            # 项目文档
 ├── include                         # 头文件，包括外部库
 │   ├── MatchEngineAPI.hpp          # API和SPI接口定义

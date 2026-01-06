@@ -149,4 +149,11 @@ struct MatchParam {
     size_t log_level = 1;                     // 日志等级
     size_t bind_cpu_start_id =
         -1;    // 如果该值为-1，则不进行绑核；如果>=0，则从对应的cpu_id开始，顺序绑process_num个核心
+
+    // 静态数据参数
+    std::string offline_mode = "hdfdata";    // 外部日频历史数据输入模式，支持parquet, hdfdata，
+    std::string path_parquet =
+        "/mnt/public_shared_files/temp_daily_use_data";    // parquet模式下的文件夹路径，需要满足{path_parquet}/{date}/{data_keys}.parquet的存储结构
+    std::vector<std::string> data_keys;    // 数据字段名列表，parquet模式下为文件名，hdfdata模式下为因子的完整名称
+    bool auto_sim_date = true;             // 是否自动在路径中简化日期输入，统一简化为YYYYmmdd
 };

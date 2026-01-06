@@ -1,0 +1,17 @@
+# 数据读取路径
+path_raw: "/mnt/data0/BasicData/StockDB/FundDB/raw" # 原始数据路径
+path_L2_ori: "/oss/tick_data/L2" # L2 本地数据路径
+daily_use_data_path: "/mnt/public_shared_files/temp_daily_use_data" # 每日使用数据路径
+
+# 数据输出路径
+path_offline_save: "/mnt/data0/BasicData/StockDB/QPData/L2/kline_3s"
+path_factor_save: "/mnt/data0/BasicData/StockDB/QPData/L2/base_factor"
+
+path_logs: "./logs" # 日志文件目录
+
+mode: "offline" # FieldEngine 模式，可选值为 offline 或 online
+
+offline_sleep_sec: 5
+consumer_ready_timeout_ms: 90000 # Offline Data 等待 consumer_ready 的超时时间，单位毫秒
+
+save_kline_data: false

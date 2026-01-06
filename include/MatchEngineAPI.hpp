@@ -83,18 +83,21 @@ public:
      *
      * @param api 指向 IMatchEngineDataView 接口的指针，用于在回调函数中调用API的接口函数。
      * @param v_shm 按照 API 中 setParam 函数输入的 factor_names 顺序排列的共享内存指针。
-     * @param sec_idx_dict 股票列索引字典，为当天所有股票对应的共享内存列索引。
+     * @param sec_idx_dict 股票列索引字典，为兼容老版本
+     * @param sec_idx_vec 股票列索引数组，为当天所有股票对应的共享内存列索引。
      * @param code_list 该 SPI 需要处理的股票代码列表。
      * @param process_id 进程 ID。
      */
     void setAPI(IMatchEngineDataView *api,
                 std::vector<double *> v_shm,
                 std::unordered_map<int, int> sec_idx_dict,
+                const std::vector<int> &sec_idx_vec,
                 std::vector<int> code_list,
                 int process_id) {
         api_ = api;
         v_shm_ = v_shm;
         sec_idx_dict_ = sec_idx_dict;
+        sec_idx_vec_ = sec_idx_vec;
         code_list_ = code_list;
         process_id_ = process_id;
     }
@@ -118,6 +121,9 @@ protected:
      * 为当天所有股票对应的共享内存列索引。
      */
     std::unordered_map<int, int> sec_idx_dict_;
+
+    /// @brief 股票列索引数组
+    std::vector<int> sec_idx_vec_;
     /**
      * @brief 该 SPI 需要处理的股票代码列表。
      */
@@ -223,4 +229,12 @@ public:
     /// @param record 一条 UnifiedRecord 消息，包含所需的 securityid, parse_time, exchange
     /// @param key 数据键值
     virtual double get3sKlineLatest(const UnifiedRecord *record, const std::string &key) = 0;
+
+    /// @brief 获取日频静态数据字段的索引位置, 仅在Init中调用，用于初始化索引
+    /// @param field_name 字段名称
+    /// @return 字段索引，如果未找到返回 std::numeric_limits<size_t>::max()
+    virtual size_t getDailyDataIdx(const std::string &field_name) = 0;
+
+    /// @brief 索引访问获取日频静态数据
+    virtual double getDailyData(size_t daily_data_idx, int securityid) = 0;
 };

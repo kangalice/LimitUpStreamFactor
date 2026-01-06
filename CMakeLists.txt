@@ -13,12 +13,13 @@ find_package(pybind11 REQUIRED)
 find_package(cxxopts REQUIRED)
 find_package(fmtlog REQUIRED)
 find_package(internalcpplib REQUIRED)
+find_package(yaml-cpp REQUIRED)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/bin")
 add_executable(demo demo/Basic.cpp)
 
-# 复制 config.json 到构建输出目录
-# configure_file(config.json ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/config.json COPYONLY)
+# 复制 config.yaml 到构建输出目录
+# configure_file(config.yaml ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/config.yaml COPYONLY)
 
 target_include_directories(demo PRIVATE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>

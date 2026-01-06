@@ -2,6 +2,7 @@
 #include "MatchEngineAPI.hpp"
 #include "ObjectPool.hpp"
 #include <algorithm>
+#include <bitset>
 #include <common_utils/Utils.hpp>
 #include <ctime>
 #include <cxxopts.hpp>
@@ -35,6 +36,8 @@ public:
                   << std::endl;
         col_size_ = code_list_.size();
 
+        my_sec_idx_.resize(700000, -1);
+
         for (int i = 0; i < col_size_; i++) {
             ori_order_map[code_list_[i]] = std::unordered_map<seqnum_t, MyOrder *>();
             ori_trade_map[code_list_[i]] = std::unordered_map<seqnum_t, MyTrade *>();
@@ -46,23 +49,32 @@ public:
 
         order_num_.resize(col_size_, 0);
         trade_num_.resize(col_size_, 0);
+        up_limit_order_vol_.resize(col_size_, 0);
+
+        // 通过字段名获取 idx, 名字如有"/"，这里传参直接使用"/"后面的字符串
+        up_limit_price_idx_ = api_->getDailyDataIdx("up_limit_price");
     }
 
     /// 状态变量更新函数
     void reset() {
         std::fill(order_num_.begin(), order_num_.end(), 0.0);
         std::fill(trade_num_.begin(), trade_num_.end(), 0.0);
+        std::fill(up_limit_order_vol_.begin(), up_limit_order_vol_.end(), 0.0);
     }
 
     void reset(int securityid) {
         order_num_[my_sec_idx_[securityid]] = 0.0;
         trade_num_[my_sec_idx_[securityid]] = 0.0;
+        up_limit_order_vol_[my_sec_idx_[securityid]] = 0.0;
     }
 
     /// @brief 在当笔盘口更新前，接收逐笔委托
     /// @param order 委托数据
     void onBeforeAddOrder(const UnifiedRecord *order) override {
-        if (ori_order_map.find(order->securityid) == ori_order_map.end()) {
+        // if (ori_order_map.find(order->securityid) == ori_order_map.end()) {
+        //     return;
+        // }
+        if (my_sec_idx_[order->securityid] == -1) {
             return;
         }
         auto &sec_map = ori_order_map[order->securityid];
@@ -98,6 +110,12 @@ public:
             // double ask1_by_idx = api_->get3sKlineByIdx(order, "ask1", 97);    // 按该股票OB次数索引获取
             // double ask1_by_time = api_->get3sKlineByTime(order, "ask1", 93015000);    // 按时间获取
 
+            // // 获取日频静态数据示例：需先在 MatchParam 中正确配置字段的加载
+            // // double adj_factor = api_->getDailyData(accum_adj_factor_idx_, order->securityid);
+            double up_limit_price = api_->getDailyData(up_limit_price_idx_, order->securityid);
+            if (order->price >= up_limit_price) {
+                up_limit_order_vol_[my_sec_idx_[order->securityid]] += order->qty;
+            }
         } else {
             // 处理撤单数据
         }
@@ -106,7 +124,10 @@ public:
     /// @brief 在当笔盘口更新前，接收逐笔成交
     /// @param trade 成交数据
     void onBeforeAddTrade(const UnifiedRecord *trade) override {
-        if (ori_trade_map.find(trade->securityid) == ori_trade_map.end()) {
+        // if (ori_trade_map.find(trade->securityid) == ori_trade_map.end()) {
+        //     return;
+        // }
+        if (my_sec_idx_[trade->securityid] == -1) {
             return;
         }
 
@@ -165,9 +186,10 @@ public:
         int sec_idx;
         // 按在Params.factor_names中确定好的因子顺序，逐股票写出因子值，同时注意只写出本进程对应的股票的数据
         for (int i = 0; i < col_size_; i++) {
-            sec_idx = sec_idx_dict_[code_list_[i]];
+            sec_idx = sec_idx_vec_[code_list_[i]];
             v_shm_[0][row_length + sec_idx] = order_num_[i];
             v_shm_[1][row_length + sec_idx] = trade_num_[i];
+            v_shm_[2][row_length + sec_idx] = up_limit_order_vol_[i];
         }
         this->reset();
     }
@@ -177,14 +199,19 @@ public:
     /// @param row_length 当前行数据起始点
     /// @param securityid 写出数据的股票代码
     void onFactorOB(int factor_ob_idx, int row_length, int securityid) override {
+        int sec_idx = sec_idx_vec_[securityid];
         if (factor_ob_idx >= max_factor_ob_idx_) {
             std::cout << "[factor ob " << process_id_ << "] ob idx: " << factor_ob_idx << std::endl;
-            logi("[factor ob {}] ob idx: {}", process_id_, factor_ob_idx);
+            logi("[factor ob {}] ob idx: {}, row_length: {}, sec_idx: {}",
+                 process_id_,
+                 factor_ob_idx,
+                 row_length,
+                 sec_idx);
             max_factor_ob_idx_++;
         }
-        int sec_idx = sec_idx_dict_[securityid];
         v_shm_[0][row_length + sec_idx] = order_num_[my_sec_idx_[securityid]];
         v_shm_[1][row_length + sec_idx] = trade_num_[my_sec_idx_[securityid]];
+        v_shm_[2][row_length + sec_idx] = up_limit_order_vol_[my_sec_idx_[securityid]];
         this->reset(securityid);
     }
 
@@ -194,15 +221,20 @@ protected:
 
     std::unordered_map<int, std::unordered_map<seqnum_t, MyOrder *>> ori_order_map;    // 分股票的原始订单委托序列
     std::unordered_map<int, std::unordered_map<seqnum_t, MyTrade *>> ori_trade_map;    // 分股票的原始订单成交序列
-    std::unordered_map<int, int> my_sec_idx_;    // 维护一个本spi处理的股票的下标序列
+    // std::unordered_map<int, int> my_sec_idx_;    // 维护一个本spi处理的股票的下标序列
+    std::vector<int> my_sec_idx_;    // 数组形式的本spi处理的股票的下标序列
 
-    std::vector<double> order_num_;    // 要写的因子1：委托笔数
-    std::vector<double> trade_num_;    // 要写的因子2：成交笔数
+    std::vector<double> order_num_;             // 要写的因子1：委托笔数
+    std::vector<double> trade_num_;             // 要写的因子2：成交笔数
+    std::vector<double> up_limit_order_vol_;    // 要写的因子3：涨停价委托量
 
     size_t col_size_;            // 列的长度，即本spi处理的股票总数
     size_t aligned_col_size_;    // 实际列长度，为SIMD对齐准备的股票个数
 
     int max_factor_ob_idx_ = 0;    // 当前最大的factor_ob_idx
+
+    // 用户定义的静态数据字段索引
+    size_t up_limit_price_idx_;
 };
 
 int main(int argc, char *argv[]) {
@@ -260,15 +292,29 @@ int main(int argc, char *argv[]) {
 
     // 设置参数，参数含义见MatchParam声明
     MatchParam param;
-    param.factor_names = std::vector<std::string>{"order_num", "trade_num"};
+    param.factor_names = std::vector<std::string>{"order_num", "trade_num", "up_limit_order_vol"};
     param.incre_port = incre_port;
     param.process_num = process_num;
-    param.recv_market = "sz";
     param.skip_unlink = skip_unlink;
     param.log_level = 1;
     param.check_error = check_error;
     param.factor_interver_ms = 60000;
     param.bind_cpu_start_id = -1;
+
+    // // 使用 "parquet" 模式读取静态数据
+    // param.offline_mode = "parquet";
+    // param.path_parquet = "/mnt/public_shared_files/temp_daily_use_data";
+    // param.data_keys = {"accum_adj_factor_2",    //
+    //                    "down_limit_price",      //
+    //                    "pre_close_price",       //
+    //                    "static_data",           //
+    //                    "up_limit_price"};       //
+    // param.auto_sim_date = true;
+
+    // 或使用 "hdfdata" 模式读取静态数据
+    param.offline_mode = "hdfdata";
+    param.data_keys = {"basic/up_limit_price"};
+
     match_api->setParam(param);
 
     // 启动撮合，进程会阻塞在该函数
