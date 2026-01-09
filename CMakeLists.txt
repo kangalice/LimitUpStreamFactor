@@ -16,12 +16,12 @@ find_package(internalcpplib REQUIRED)
 find_package(yaml-cpp REQUIRED)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/bin")
-add_executable(demo demo/Basic.cpp)
+add_executable(LimitUp1 src/LimitUp1.cpp)
 
 # 复制 config.yaml 到构建输出目录
 # configure_file(config.yaml ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/config.yaml COPYONLY)
 
-target_include_directories(demo PRIVATE
+target_include_directories(LimitUp1 PRIVATE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/external>
     ${pybind11_INCLUDE_DIRS}
@@ -35,7 +35,7 @@ find_library(MATCHENGINEIMPL_LIBRARY
     REQUIRED
 )
 
-target_link_libraries(demo
+target_link_libraries(LimitUp1
     internalcpplib::internalcpplib
     ${MATCHENGINEIMPL_LIBRARY}
     pybind11::embed
@@ -43,7 +43,7 @@ target_link_libraries(demo
     fmtlog::fmtlog
 )
 
-set_target_properties(demo PROPERTIES
+set_target_properties(LimitUp1 PROPERTIES
     INSTALL_RPATH "$ORIGIN/../lib"
     BUILD_WITH_INSTALL_RPATH TRUE
 )

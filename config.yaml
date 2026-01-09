@@ -5,7 +5,7 @@ daily_use_data_path: "/mnt/public_shared_files/temp_daily_use_data" # 每日使�
 
 # 数据输出路径
 path_offline_save: "/mnt/data0/BasicData/StockDB/QPData/L2/kline_3s"
-path_factor_save: "/mnt/data0/BasicData/StockDB/QPData/L2/base_factor"
+path_factor_save: "/oss/LimitUp"
 
 path_logs: "./logs" # 日志文件目录
 
